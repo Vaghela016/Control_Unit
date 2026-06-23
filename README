@@ -1,0 +1,13 @@
+# Automotive Seat Control Unit (Sitzsteuergerät)
+
+This project implements the bare-metal firmware for an automotive seat control unit. It reads inputs from an I2C control panel (Bedienteil) and drives up to 4 DC motors using hardware PWM. 
+
+## Technical Details
+* **Microcontroller:** ATmega328PB
+* **Language:** Bare-metal C (C99 standard)
+* **Toolchain:** AVR-GCC with a custom Makefile 
+* **Key Features:**
+  * **Hardware PWM:** Utilizes Timer1 for 20 kHz PWM motor control to ensure silent operation.
+  * **Communication:** Hardware I2C Master polling for control panel telemetry.
+  * **Power Management:** Implements an interrupt-driven architecture (PCINT) combined with AVR Power-Down Sleep Mode to minimize power consumption when idle.
+  * **Safety:** ADC polling for hardware limit detection and voltage protection.

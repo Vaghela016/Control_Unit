@@ -1,0 +1,14 @@
+# Compiled Object files
+*.o
+
+# Executables and Binaries
+*.elf
+*.hex
+
+# VS Code or PlatformIO directories (if used)
+.vscode/
+.pio/
+
+# OS-specific files
+.DS_Store
+Thumbs.db
