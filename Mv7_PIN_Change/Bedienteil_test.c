@@ -6,6 +6,7 @@
 #include <util/delay.h>
 #include <avr/interrupt.h>
 #include <avr/wdt.h>
+#include <avr/sleep.h>
 #include "i2cmaster.h"
 #include "lcd_mccog42005a6w.h"
 #include "M1_test.h"
