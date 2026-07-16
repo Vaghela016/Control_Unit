@@ -1,18 +1,18 @@
 #include "M1_test.h"
 
 #ifndef F_CPU
-    #define F_CPU 8000000UL // 8 MHz standalone clock
+    #define F_CPU 8000000UL 
 #endif
 
 #include <avr/io.h>
 #include <util/delay.h>
 #include <avr/interrupt.h>
 #include <avr/sleep.h>
-#include <avr/wdt.h>
+// #include <avr/wdt.h>
 #include "i2cmaster.h"
 #include "lcd_mccog42005a6w.h"
 
-// --- Global Tracking Arrays ---
+// Global Tracking Arrays
 volatile int16_t counters[4] = {0, 0, 0, 0}; 
 volatile uint8_t STOP_M[4]   = {0, 0, 0, 0}; 
 volatile uint8_t M_Active[4] = {0, 0, 0, 0}; 
@@ -21,7 +21,7 @@ volatile uint8_t M_REV[4]    = {0, 0, 0, 0};
 volatile uint8_t Wait[4]     = {0, 0, 0, 0}; 
 volatile uint8_t MAX_PWM     = 0;
 
-// --- Hardware Initialization ---
+// Hardware Initialization
 
 void adc_init(void) {
     ADMUX = (1 << REFS0); // AVCC as reference
@@ -53,20 +53,20 @@ void timer_setup() {
 }
 
 void motor_init(void) {
-    // 1. Configure Motor Control Pins as Outputs
+    // Configure Motor Control Pins as Outputs
     DDRD |= (1 << PD0) | (1 << PD1) | (1 << PD2) | (1 << PD3) | (1 << PD4) | (1 << PD5);
     
-    // 2. Configure PWM Pins (OC1A/PB1 and OC1B/PB2) as Outputs
+    // Configure PWM Pins (OC1A/PB1 and OC1B/PB2) as Outputs
     DDRB |= (1 << PB1) | (1 << PB2);
     
-    // 3. Configure the Current Sense / SEL0 Pin as Output
+    // Configure the Current Sense / SEL0 Pin as Output
     DDRE |= (1 << PE0);
     
-    // Initialize all outputs to LOW (Safe State)
+    // Initialize all outputs to LOW
     PORTD &= ~((1 << PD0) | (1 << PD1) | (1 << PD2) | (1 << PD3) | (1 << PD4) | (1 << PD5));
     PORTE &= ~(1 << PE0);
     
-    // 4. Hardware Timer1 Setup for Fast PWM (Mode 14)
+    // Hardware Timer1 Setup for Fast PWM (Mode 14)
     // Non-inverting mode on Channel A and B
     TCCR1A = (1 << COM1A1) | (1 << COM1B1) | (1 << WGM11);
     // Fast PWM with ICR1 as TOP, No Prescaler (8MHz / 1 = 8MHz timer clock)
@@ -88,12 +88,12 @@ void PinChange_setup(void){
 }
 
 void MCU_sleep(void) {
-    wdt_disable(); // Disable watchdog to prevent reboot while asleep
+    // wdt_disable(); // Disable watchdog to prevent reboot while asleep
     set_sleep_mode(SLEEP_MODE_PWR_DOWN); 
     sleep_enable(); 
     sleep_cpu();   // System HALTS here until Pin Change triggers
     sleep_disable(); 
-    wdt_enable(WDTO_250MS); // Re-arm watchdog instantly upon waking up
+    //wdt_enable(WDTO_250MS); // Re-arm watchdog instantly upon waking up
     _delay_ms(10); // Sync delay for Bedienteil processing
 }
 
@@ -101,7 +101,7 @@ ISR(PCINT2_vect) {
     // Empty ISR mandatory for routing the wake-up interrupt
 }
 
-// --- VNH7070ASTR Motor Control ---
+// Motor Control Logic
 
 void motor_set(uint8_t state, uint16_t speed) {
     
@@ -113,7 +113,6 @@ void motor_set(uint8_t state, uint16_t speed) {
         ICR1 = PWM_MAX; // 399 (~20 kHz)
     }   
 
-    // Apply strict VNH7070ASTR Truth Table Logic
     switch (state) {
         
         case M1_FWD:
@@ -219,7 +218,7 @@ void voltage_check(void){
             }
 }
 
-// --- Background Thermal/Acceleration Management ---
+// Background Thermal/Acceleration Management
 
 ISR(TIMER2_OVF_vect) {
     static uint8_t ticks = 0;

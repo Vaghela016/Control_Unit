@@ -2,7 +2,7 @@
 	#define M1_TEST
 
 #ifndef F_CPU
-	#define F_CPU 8000000UL // Define clock speed as 8 MHz
+	#define F_CPU 8000000UL
 #endif
 
 #include <avr/io.h>
@@ -11,11 +11,11 @@
 // Define hardware pins
 
 #ifndef PWM1
-	#define PWM1 PB1 // OC1A (Arduino Pin 9)
+	#define PWM1 PB1 // OC1A
 #endif
 
 #ifndef PWM2
-	#define PWM2 PB2 // OC1B (Arduino Pin 10)
+	#define PWM2 PB2 // OC1B
 #endif
 
 
@@ -93,7 +93,7 @@
 
 
 // Cooldown parameters
-extern volatile int16_t counters[4]; // Assuming 4 motors
+extern volatile int16_t counters[4]; // To track the active time of each motor for cooldown management
 extern volatile uint8_t STOP_M[4]; // To track if each motor has reached its stop threshold
 
 // To track which motors are currently actively moving

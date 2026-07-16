@@ -4,13 +4,13 @@
 #include "lcd_mccog42005a6w.h"
 #include "M1_test.h" 
 
-// --- 1. Non-Volatile Memory (EEPROM) ---
+// EEPROM
 int32_t EEMEM ee_last_pos = 0;
 int32_t EEMEM ee_pos_T3 = -1;
 int32_t EEMEM ee_pos_T4 = -1;
 int32_t EEMEM ee_pos_T5 = -1;
 
-// --- 2. Virtual Position Tracking ---
+// Virtual Position Tracking
 static int32_t virtual_position = 0;
 static int32_t target_position = 0;
 static int32_t startup_target = 0;
@@ -41,7 +41,7 @@ int32_t SeatMemory_GetPosition(void) {
 uint8_t SeatMemory_Run(uint8_t manual_state, uint8_t physical_last_state, uint8_t t3, uint8_t t4, uint8_t t5, uint8_t max_pwm, uint16_t adc_val) {
     static uint8_t last_active_motor = 0;
 
-    // --- 1. KINEMATIC POSITION TRACKING ---
+    // KINEMATIC POSITION TRACKING
     uint8_t active_fwd = (physical_last_state == 1 || physical_last_state == 21 || physical_last_state == 22 || physical_last_state == 25);
     uint8_t active_rev = (physical_last_state == 2 || physical_last_state == 23 || physical_last_state == 24);
 
@@ -55,7 +55,7 @@ uint8_t SeatMemory_Run(uint8_t manual_state, uint8_t physical_last_state, uint8_
         last_active_motor = 0;
     }
 
-    // --- 2. STATE MACHINE ROUTING ---
+    // STATE MACHINE ROUTING
 
     // PHASE 1: Welcome Feature (Drive to physical end-stop)
     if (memory_status == 1) {
@@ -69,7 +69,7 @@ uint8_t SeatMemory_Run(uint8_t manual_state, uint8_t physical_last_state, uint8_
             }
             if (welcome_timeout > 200) { 
                 memory_status = 5; 
-                welcome_timeout = 0; // CRITICAL FIX: Reset timer for the E11 display
+                welcome_timeout = 0; // Reset timer for the E11 display
                 return 0;
             }
         }
@@ -86,7 +86,7 @@ uint8_t SeatMemory_Run(uint8_t manual_state, uint8_t physical_last_state, uint8_
         }
         if (welcome_timeout > 200) { 
             memory_status = 5; 
-            welcome_timeout = 0; // CRITICAL FIX: Reset timer for the E11 display
+            welcome_timeout = 0; // Reset timer for the E11 display
             return 0;
         }
         if (welcome_timeout > 10 && adc_val >= 303) {

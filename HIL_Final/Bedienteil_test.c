@@ -5,12 +5,12 @@
 #include <avr/io.h>
 #include <util/delay.h>
 #include <avr/interrupt.h>
-// #include <avr/wdt.h>
 #include <avr/sleep.h>
 #include "i2cmaster.h"
 #include "lcd_mccog42005a6w.h"
 #include "M1_test.h"
 #include "seat_pos.h"
+// #include <avr/wdt.h>
 
 #define BEDIENTEIL_ADDR 0x40
 #define BEDIENTEIL_READ ((BEDIENTEIL_ADDR << 1) | I2C_READ)
@@ -66,14 +66,14 @@ int main(void) {
 
     // Initial Voltage Check at Startup
         voltage_check(); // Check voltage before processing commands
-        if (adc_read(0) < 360) { // If voltage is below 0.66V (assuming 3.3V reference)
+        if (adc_read(0) < 360) { // If voltage is below ~9V
             lcdSetCursor(1, 1);
             lcdWriteText("E_07:");
             lcdSetCursor(2, 1);
             lcdWriteText("U_KL30 < 09");
             return 0; // Stop the program to prevent damage from low voltage
         }
-        else if (adc_read(0) > 650) { // If voltage is above 3.1V (assuming 3.3V reference, accounting for noise)
+        else if (adc_read(0) > 650) { // If voltage is above ~16V
             lcdSetCursor(1, 1);
             lcdWriteText("E_06:");
             lcdSetCursor(2, 1);
@@ -93,14 +93,14 @@ int main(void) {
 
         // Initial Voltage Check at Startup
         voltage_check(); // Check voltage before processing commands
-        if (adc_read(0) < 450) { // If voltage is below 0.66V
+        if (adc_read(0) < 360) { // If voltage is below ~9V
             lcdSetCursor(1, 1);
             lcdWriteText("E_07:");
             lcdSetCursor(2, 1);
             lcdWriteText("U_KL30 < 09");
             return 0; // Stop the program to prevent damage from low voltage
         }
-        else if (adc_read(0) > 825) { // If voltage is above 3.1V
+        else if (adc_read(0) > 650) { // If voltage is above ~16V
             lcdSetCursor(1, 1);
             lcdWriteText("E_06:");
             lcdSetCursor(2, 1);
@@ -108,14 +108,13 @@ int main(void) {
             return 0; // Stop the program to prevent damage from overvoltage
         }
     
+        // I2C Byte Decoding
         if (ret == 0) {
             // ACK RECEIVED
             uint8_t byte1 = i2c_readAck();
             uint8_t byte2 = i2c_readAck();
             uint8_t byte3 = i2c_readNak(); 
-            
-            (void)byte2; // Explicitly discard unused bytes
-            (void)byte3; 
+             
             i2c_stop();
 
             // --- Step 1: I2C Byte Decoding ---
@@ -148,12 +147,12 @@ int main(void) {
             }
 
 
-            // --- Step 1.2: Seat Memory Kinematic Router ---
+            //  Seat Memory Kinematic Router
             uint8_t t3 = (byte2 & (1 << 7)) ? 1 : 0;
             uint8_t t4 = (byte3 & (1 << 0)) ? 1 : 0;
             uint8_t t5 = (byte3 & (1 << 1)) ? 1 : 0;
             
-            // Pass LAST_STATE so the math tracker knows what the motor actually did!
+            // Pass LAST_STATE so the math tracker knows what the motor actually did
             uint8_t mem_override = SeatMemory_Run(current_state, last_state, t3, t4, t5, MAX_PWM, adc_avg(7));
             
             if (mem_override == 254) {
@@ -167,14 +166,14 @@ int main(void) {
             uint8_t current_stop_sum = STOP_M[0] + STOP_M[1] + STOP_M[2] + STOP_M[3];
             uint8_t open_count = OPEN[0] + OPEN[1] + OPEN[2] + OPEN[3] + OPEN[4];
             if (open_count == 5) {
-                current_state = 255; // Force the state to IDLE to prevent further motor commands
+                current_state = 0; // Force the state to IDLE to prevent further motor commands
                 lcdSetCursor(1, 1); lcdWriteText(" E_00:");
                 lcdSetCursor(2, 1); lcdWriteText("   ALL MOTORS OPEN   ");
             }
             else if (open_count > 0  && open_count < 5) {
                 for (uint8_t i = 0; i < 4; i++) {
                     if (OPEN[i] == 1) {
-                        current_state = 255; // Force the state to IDLE to prevent further motor commands
+                        current_state = 0; // Force the state to IDLE to prevent further motor commands
                         i = i + 1; // Increment to match the motor number (1-4)
                         lcdClear();
                         lcdSetCursor(1, 1); lcdWriteTextf(" E_0%u:", i);
@@ -185,21 +184,21 @@ int main(void) {
                     }
                 }
                 if (OPEN[4] == 1) {
-                    current_state = 255; // Force the state to IDLE to prevent further motor commands 
+                    current_state = 0; // Force the state to IDLE to prevent further motor commands 
                     lcdClear();
                     lcdSetCursor(1, 1); lcdWriteText(" E_05:");
                     lcdSetCursor(2, 1); lcdWriteText("HEAT_OPEN");
                 }
             }
 
-            // --- Step 1.2: Boss Mode Non-Blocking Router ---
+            // Boss Mode Non-Blocking Router
 
-            // Safety Abort: If the user presses any normal switch (1-9), cancel Boss Mode instantly!
+            // Safety Abort: If pressed any normal switch (1-9), cancel Boss Mode instantly!
             if (current_state >= 1 && current_state <= 9) {
                 boss_mode_active = 0;
             }
 
-            // Trigger: If the user pressed Taster 1 (let's assume you mapped it to current_state 10)
+            // Trigger: If pressed Taster 1, activate Boss Mode!
             if (current_state == 10) {
                 boss_mode_active = 1;
             }
@@ -222,7 +221,7 @@ int main(void) {
                 }
             }
 
-            // --- Step 2: Change-Only State Machine Execution ---
+            // Change-Only State Machine Execution
             if ((current_state != last_state) || (MAX_PWM != last_MAX_PWM) || (current_stop_sum != last_stop_sum)) {
                 
                 lcdClear(); 
@@ -378,7 +377,7 @@ int main(void) {
                     else motor_set(M1_FWD, speed);
                 }
                 
-                // --- NEW UI FEEDBACK ENGINE ---
+                // FEEDBACK
                 else if (current_state >= 33 && current_state <= 35) {
                     motor_set(M_STOP, 0);
                     lcdSetCursor(0, 1); lcdWriteText("= MEMORY SETUP =");
@@ -397,7 +396,7 @@ int main(void) {
                 
                 else {
                     motor_set(M_STOP, 0);
-                    // Print position actively when idle
+                    // Print relative seat position when idle
                     lcdSetCursor(1, 1); lcdWriteTextf("POS: %ld        ", SeatMemory_GetPosition());
                 }
 
@@ -414,22 +413,22 @@ int main(void) {
             i2c_stop();
         }
 
-        // --- Active Polling & Blanking Delay ---
+        // Active Polling & Blanking Delay
         _delay_ms(50);
         
         if (keep_awake_timer > 0) keep_awake_timer--;
         if (blanking_timer > 0) blanking_timer--; 
 
-        // --- Step 3: Continuous End Position Monitoring ---
+        // Step 3: Continuous End Position Monitoring
         if (current_state != 0 && blanking_timer == 0) {
 
             uint8_t fault_active = 0;
 
             if (SeatMemory_IsCalibrating() == 1) {
-                 // Do absolutely nothing. Let seat_pos.c handle the wall impact natively!
+                 // Do absolutely nothing. Let seat_pos.c handle the wall impact natively.
             }
 
-            // --- CRITICAL SAFETY SHIELD ---
+            // CRITICAL SAFETY SHIELD
             else {
                 if      (current_state == 1 && (END_FWD[0] == 1 || OPEN[0] == 1)) fault_active = 1;
                 else if (current_state == 2 && (END_REV[0] == 1 || OPEN[0] == 1)) fault_active = 1;
@@ -451,7 +450,7 @@ int main(void) {
                 // Read the ADC exactly ONCE per loop
                 uint16_t current_sense = adc_avg(7);
 
-                // 1. STALL DETECT: End Position (Highest Priority)
+                // STALL DETECT: End Position Reached
                 if (current_sense >= 303) {
                     
                     if (current_state == 1 || current_state == 21) END_FWD[0] = 1; 
@@ -467,8 +466,7 @@ int main(void) {
                     last_state = 0; // Force LCD redraw
                 }
 
-                // 2. OPEN LOAD DETECT: Wire broken or motor disconnected 
-                // (We removed > 0 because a truly broken wire is exactly 0!)
+                // OPEN LOAD DETECT: Wire broken or motor disconnected 
                 else if (current_sense < 25) { 
                     
                     if (current_state == 1 || current_state == 2 || current_state == 21) OPEN[0] = 1;
@@ -483,7 +481,7 @@ int main(void) {
             }
         }
 
-        // --- Step 4: Sleep Mode ---
+        // Sleep Mode 
         if (idle() == 1 && keep_awake_timer == 0) {
             
             keep_awake_timer = 10;
